@@ -5,7 +5,7 @@ import socket
 import subprocess
 import threading
 from functools import reduce
-from time import sleep
+from time import sleep, time
 
 import numpy as np
 
@@ -27,7 +27,7 @@ class SuperServer:
         self.server_tcp = self.create_server_tcp()
 
         self.number_of_clientes = 0
-        self.limit_clients = 5
+        self.limit_clients = 3
         self.servers_aux_available = {}
         self.servers_aux_unavailable = {}
 
@@ -43,16 +43,15 @@ class SuperServer:
             self.number_of_clientes += 1
 
             if self.number_of_clientes > self.limit_clients:
-                print("Limite atingido para este servidor, encaminhando mensagem...")
+                # print("Limite atingido para este servidor, encaminhando mensagem...")
                 if len(self.servers_aux_available) > 0:
-                    matriz_result, server_aux = self.send_server_aux(msg.decode("utf-8"))
-                    print("AUX ", server_aux)
+                    matriz_result, server_aux = self.send_server_aux(msg.decode("utf-8"), client)
                     t = threading.Thread(target=self.send_response_by_server_aux, args=(client, matriz_result, server_aux))
                 else:
-                    print("Sem servidores auxiliares disponiveis")
+                    # print("Sem servidores auxiliares disponiveis")
                     t = threading.Thread(target=self.send_response, args=(client, None))
             else:
-                print("Clients connected: ", self.number_of_clientes)
+                # print("Clients connected: ", self.number_of_clientes)
                 t = threading.Thread(target=self.send_response, args=(client, msg.decode("utf-8")))
 
             t.start()
@@ -63,14 +62,14 @@ class SuperServer:
         return json.dumps(result)
 
     def create_server_tcp(self):
-        print("Criando servidor tcp")
+        # print("Criando servidor tcp")
         socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         socket_tcp.bind((SERVER_ADDRESS, SERVER_TCP_PORT))
         socket_tcp.listen(1)
         return socket_tcp
 
     def listener_servers_aux(self):
-        print("Descobrindo servidores auxiliares")
+        # print("Descobrindo servidores auxiliares")
         while True:
             conn, client_address = self.server_tcp.accept()
             message = conn.recv(1024)
@@ -81,16 +80,17 @@ class SuperServer:
             key_dict = f"{data['address']}-{data['port']}"
 
             self.servers_aux_available[key_dict] = data
-            print("Servidor auxiliar conectado: ", len(self.servers_aux_available))
+            # print("Servidor auxiliar conectado: ", len(self.servers_aux_available))
 
-    def send_server_aux(self, data):
+    def send_server_aux(self, data, client):
         server = self._get_server_aux()
-        print("Enviando para servidor auxiliar: ", server["address"], server["port"])
 
         address = server["address"]
         port = server["port"]
 
         if server["current_connections"] < server["max_connections"]:
+            start_time = time()
+
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             s.connect((address, port))
             s.send(data.encode())
@@ -99,6 +99,17 @@ class SuperServer:
             s.close()
 
             server["current_connections"] += 1
+
+            duration = time() - start_time
+
+            print("------------------------- Resultado-------------------------")
+            print("Cliente: ", client)
+            print("Time: ", duration - 3)
+            print("Matriz receive: ", data)
+            print("Matriz result: ", message.decode("utf-8"))
+            print("Taxa: ", self.calculate_performance_rate(data, duration - 3))
+            print("------------------------------------------------------------")
+            print("")
 
             return message.decode("utf-8"), f"{address}-{port}"
         else:
@@ -109,13 +120,14 @@ class SuperServer:
         return self._matriz_calculate(matriz_array["matrizes"])
 
     def send_response(self, ip, matriz_str=None):
-        sleep(5)
+        sleep(3)
         result = self._format_matriz(matriz_str) if matriz_str else ""
+
         self.sock.sendto(result.encode("utf-8"), ip)
         self.number_of_clientes -= 1
 
     def send_response_by_server_aux(self, ip, matriz_str, server_aux):
-        sleep(7)
+        # sleep(7)
         self.sock.sendto(matriz_str.encode("utf-8"), ip)
         if self.servers_aux_available[server_aux]["current_connections"] > 0:
             self.servers_aux_available[server_aux]["current_connections"] -= 1
@@ -128,8 +140,14 @@ class SuperServer:
 
     def _start_servers_aux_process(self, number_of_servers_aux=1):
         for _ in range(number_of_servers_aux):
-            print("Iniciando servidor aux")
+            # print("Iniciando servidor aux")
             subprocess.Popen(["python", "-m", "server_aux"])
+
+    def calculate_performance_rate(self, matrizes_str, duration):
+        formated = json.loads(matrizes_str)
+        matriz = formated["matrizes"]
+        size_processing = len(matriz[0]) * len(matriz[1][0])
+        return round((duration / size_processing), 6)
 
 
 if __name__ == "__main__":

@@ -19,8 +19,8 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "4"
-          memory: "4096M"
+          cpus: "2"
+          memory: "2048M"
 
 
   client_1:
@@ -66,7 +66,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: "1024M"
+          memory: "156M"
 
   client_4:
     build: .
@@ -111,7 +111,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: "1024M"
+          memory: "156M"
 
   client_7:
     build: .
@@ -126,7 +126,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: "1024M"
+          memory: "512M"
 
   client_8:
     build: .
@@ -141,7 +141,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: "1024M"
+          memory: "256M"
 
   client_9:
     build: .
@@ -156,7 +156,7 @@ services:
       resources:
         limits:
           cpus: "1"
-          memory: "1024M"
+          memory: "324M"
 
   client_10:
     build: .
@@ -170,5 +170,5 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1"
-          memory: "1024M"
+          cpus: "0.25"
+          memory: "100M"

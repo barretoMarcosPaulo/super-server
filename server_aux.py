@@ -35,7 +35,7 @@ class ServerAux(threading.Thread):
             client_socket, client_address = server.accept()
             message = client_socket.recv(2048)
             message = message.decode("utf-8")
-            print("Recebendo do matriz do super servidor")
+            # print("Recebendo do matriz do super servidor")
             sleep(3)
 
             if message == "is_available":
@@ -50,7 +50,7 @@ class ServerAux(threading.Thread):
         response = self._format_matriz(message).encode("utf-8")
         conn.send(response)
         conn.close()
-        print("Encaminhando para super servidor")
+        # print("Encaminhando para super servidor")
 
     def _format_matriz(self, data):
         matriz_array = json.loads(data)
