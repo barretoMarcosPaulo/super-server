@@ -91,7 +91,6 @@ def check_port_in_use(port):
 if __name__ == "__main__":
     SERVER_PORT = port_available()
     # Conectando e se registrando no super server
-    print(">>>>>>>>>>>>>>>> SERVER_PORT", SERVER_PORT)
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((SUPER_SERVER_ADDRESS, SUPER_SERVER_PORT))
     s.send(json.dumps({"max_connections": MAX_CONNECTIONS, "port": SERVER_PORT}).encode())

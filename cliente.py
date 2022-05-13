@@ -1,7 +1,8 @@
 import json
 import random
 import socket
-from time import sleep
+from functools import reduce
+from time import sleep, time
 
 import numpy as np
 
@@ -23,19 +24,26 @@ class Client:
 
         UDPClientSocket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
-        UDPClientSocket.sendto(data_send, serverAddressPort)
-        response = UDPClientSocket.recvfrom(self.buffer_size)
-        print(response[0].decode("utf-8"))
+        for _ in range(3):
 
-        sleep(3)
-        UDPClientSocket.sendto(data_send, serverAddressPort)
-        response = UDPClientSocket.recvfrom(self.buffer_size)
-        print(response[0].decode("utf-8"))
+            start_time = time()
+            self._matriz_calculate(self._generate_random_matriz())
+            duration = round(time() - start_time, 7)
 
-        sleep(3)
-        UDPClientSocket.sendto(data_send, serverAddressPort)
-        response = UDPClientSocket.recvfrom(self.buffer_size)
-        print(response[0].decode("utf-8"))
+            UDPClientSocket.sendto(data_send, serverAddressPort)
+            response = UDPClientSocket.recvfrom(self.buffer_size)
+
+            server_result = json.loads(response[0].decode("utf-8"))
+
+            if server_result.get("server_time_duration", False):
+                print("duration in client: ", duration)
+                print("duration in Server: ", server_result["server_time_duration"])
+            else:
+                print("Not Available")
+
+            print(" ")
+
+        print("------------------------------------------------------------------------")
 
         response = UDPClientSocket.recvfrom(self.buffer_size)
 
@@ -50,6 +58,10 @@ class Client:
         #     matrizes.append(m.tolist())
 
         return matrizes
+
+    def _matriz_calculate(self, matrizes):
+        matriz_result = reduce(np.dot, matrizes)
+        return {"result": matriz_result.tolist()}
 
 
 client = Client()

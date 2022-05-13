@@ -5,7 +5,7 @@ import socket
 import subprocess
 import threading
 from functools import reduce
-from time import sleep, time
+from time import time
 
 import numpy as np
 
@@ -43,23 +43,19 @@ class SuperServer:
             self.number_of_clientes += 1
 
             if self.number_of_clientes > self.limit_clients:
-                # print("Limite atingido para este servidor, encaminhando mensagem...")
                 if len(self.servers_aux_available) > 0:
                     matriz_result, server_aux = self.send_server_aux(msg.decode("utf-8"), client)
                     t = threading.Thread(target=self.send_response_by_server_aux, args=(client, matriz_result, server_aux))
                 else:
-                    # print("Sem servidores auxiliares disponiveis")
                     t = threading.Thread(target=self.send_response, args=(client, None))
             else:
-                # print("Clients connected: ", self.number_of_clientes)
                 t = threading.Thread(target=self.send_response, args=(client, msg.decode("utf-8")))
 
             t.start()
 
     def _matriz_calculate(self, matrizes):
         matriz_result = reduce(np.dot, matrizes)
-        result = {"result": matriz_result.tolist()}
-        return json.dumps(result)
+        return {"result": matriz_result.tolist()}
 
     def create_server_tcp(self):
         # print("Criando servidor tcp")
@@ -69,7 +65,6 @@ class SuperServer:
         return socket_tcp
 
     def listener_servers_aux(self):
-        # print("Descobrindo servidores auxiliares")
         while True:
             conn, client_address = self.server_tcp.accept()
             message = conn.recv(1024)
@@ -80,7 +75,6 @@ class SuperServer:
             key_dict = f"{data['address']}-{data['port']}"
 
             self.servers_aux_available[key_dict] = data
-            # print("Servidor auxiliar conectado: ", len(self.servers_aux_available))
 
     def send_server_aux(self, data, client):
         server = self._get_server_aux()
@@ -99,19 +93,13 @@ class SuperServer:
             s.close()
 
             server["current_connections"] += 1
+            duration = round(time() - start_time, 7)
 
-            duration = time() - start_time
+            message = json.loads(message.decode("utf-8"))
+            message["server_time_duration"] = duration
+            message = json.dumps(message)
 
-            print("------------------------- Resultado-------------------------")
-            print("Cliente: ", client)
-            print("Time: ", duration - 3)
-            print("Matriz receive: ", data)
-            print("Matriz result: ", message.decode("utf-8"))
-            print("Taxa: ", self.calculate_performance_rate(data, duration - 3))
-            print("------------------------------------------------------------")
-            print("")
-
-            return message.decode("utf-8"), f"{address}-{port}"
+            return message, f"{address}-{port}"
         else:
             return "Not Available", f"{address}-{port}"
 
@@ -120,14 +108,18 @@ class SuperServer:
         return self._matriz_calculate(matriz_array["matrizes"])
 
     def send_response(self, ip, matriz_str=None):
-        sleep(3)
+        start_time = time()
         result = self._format_matriz(matriz_str) if matriz_str else ""
+        duration = round(time() - start_time, 7)
+
+        result["server_time_duration"] = duration
+        result = json.dumps(result)
 
         self.sock.sendto(result.encode("utf-8"), ip)
+
         self.number_of_clientes -= 1
 
     def send_response_by_server_aux(self, ip, matriz_str, server_aux):
-        # sleep(7)
         self.sock.sendto(matriz_str.encode("utf-8"), ip)
         if self.servers_aux_available[server_aux]["current_connections"] > 0:
             self.servers_aux_available[server_aux]["current_connections"] -= 1
@@ -140,7 +132,6 @@ class SuperServer:
 
     def _start_servers_aux_process(self, number_of_servers_aux=1):
         for _ in range(number_of_servers_aux):
-            # print("Iniciando servidor aux")
             subprocess.Popen(["python", "-m", "server_aux"])
 
     def calculate_performance_rate(self, matrizes_str, duration):
